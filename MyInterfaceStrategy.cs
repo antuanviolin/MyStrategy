@@ -53,7 +53,6 @@ public class MyInterfaceStrategy : ITeamBuildingStrategy
             myteams2.Add(new Team(new Employee(engagement2.Key.Id, engagement2.Key.Name), new Employee(engagement2.Value.Id, engagement2.Value.Name)));
         }
 
-        Console.WriteLine($"Harmonic Mean for Run 1: {mean:F2}, Harmonic Mean for Run 2: {mean2:F2}");
         if(mean > mean2)
         {
             return myteams;
