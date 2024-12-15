@@ -38,29 +38,30 @@ public class MyInterfaceStrategy : ITeamBuildingStrategy
         var myengagements = GaleShapley.ConductStableMatching(myjuniors, myteamLeads);
         var satisfactionIndices = CalculateSatisfactionIndices(myengagements);
         var mean = CalculateHarmonicMean(satisfactionIndices);
+        var myteams = new List<Team>();
+        foreach (var engagement in myengagements)
+        {
+            myteams.Add(new Team(new Employee(engagement.Value.Id, engagement.Value.Name), new Employee(engagement.Key.Id, engagement.Key.Name)));
+        }
 
         var myengagements2 = GaleShapley.ConductStableMatching(myteamLeads, myjuniors);
         var satisfactionIndices2 = CalculateSatisfactionIndices(myengagements2);
         var mean2 = CalculateHarmonicMean(satisfactionIndices2);
-
-         Console.WriteLine($"Harmonic Mean for Run 1: {mean:F2}, Harmonic Mean for Run 2: {mean2:F2}");
-
-        var myteams = new List<Team>();
-        if (mean > mean2)
+        var myteams2 = new List<Team>();
+        foreach (var engagement2 in myengagements2)
         {
-            foreach (var engagement in myengagements)
-            {
-                myteams.Add(new Team(new Employee(engagement.Key.Id, engagement.Key.Name), new Employee(engagement.Value.Id, engagement.Value.Name)));
-            }
+            myteams2.Add(new Team(new Employee(engagement2.Key.Id, engagement2.Key.Name), new Employee(engagement2.Value.Id, engagement2.Value.Name)));
+        }
+
+        Console.WriteLine($"Harmonic Mean for Run 1: {mean:F2}, Harmonic Mean for Run 2: {mean2:F2}");
+        if(mean > mean2)
+        {
+            return myteams;
         }
         else
         {
-            foreach (var engagement in myengagements2)
-            {
-                myteams.Add(new Team(new Employee(engagement.Key.Id, engagement.Key.Name), new Employee(engagement.Value.Id, engagement.Value.Name)));
-            }
+            return myteams2;
         }
-        return myteams;
     }
 
     public double CalculateHarmonicMean(List<int> satisfactionIndices)
