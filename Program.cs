@@ -8,7 +8,7 @@ class Program
     static void Main(string[] args)
     {
         var random = new Random();
-        const int hackathonRuns = 1;
+        const int hackathonRuns = 1000;
 
         var juniors = LoadEmployeesFromCsv("Juniors20.csv");
         var teamLeads = LoadEmployeesFromCsv("Teamleads20.csv");
@@ -18,15 +18,15 @@ class Program
 
         for (int run = 0; run < hackathonRuns; run++)
         {
-            var teamLeadsWishlists = teamLeads.Select(tl =>
-                new Wishlist(tl.Id, GenerateRandomWishlist(juniors.Select(j => j.Id).ToArray(), random)));
+                var teamLeadsWishlists = teamLeads.Select(tl =>
+                    new Wishlist(tl.Id, GenerateRandomWishlist(juniors.Select(j => j.Id).ToArray(), random))).ToList();
 
-            var juniorsWishlists = juniors.Select(j =>
-                new Wishlist(j.Id, GenerateRandomWishlist(teamLeads.Select(tl => tl.Id).ToArray(), random)));
+                var juniorsWishlists = juniors.Select(j =>
+                    new Wishlist(j.Id, GenerateRandomWishlist(teamLeads.Select(tl => tl.Id).ToArray(), random))).ToList();
 
             var teams = strategy.BuildTeams(teamLeads, juniors, teamLeadsWishlists, juniorsWishlists);
 
-            double harmonicMean = ComputeHarmonicity(teams, teamLeadsWishlists, juniorsWishlists);
+            double harmonicMean = CalculateHarmonicMean(teams, teamLeadsWishlists, juniorsWishlists);
             Console.WriteLine($"Harmonic Mean for Run {run + 1}: {harmonicMean:F2}");
             harmonicMeans.Add(harmonicMean);
         }
@@ -40,55 +40,52 @@ class Program
     }
 
 
-    private static double ComputeHarmonicity(
+    private static double CalculateHarmonicMean(
         IEnumerable<Team> teams,
         IEnumerable<Wishlist> teamLeadsWishlists,
         IEnumerable<Wishlist> juniorsWishlists)
     {
-        var participants = new List<(string Name, List<int> WishList, int AssignedPartner, int SatisfactionIndex)>();
+        var satisfactionIndices = CalculateSatisfactionIndices(teams, teamLeadsWishlists, juniorsWishlists);
 
+        int n = satisfactionIndices.Count;
+        double sumOfReciprocals = 0;
+
+        foreach (var index in satisfactionIndices)
+        {
+            if (index > 0)
+            {
+                sumOfReciprocals += 1.0 / index;
+            }
+        }
+
+        return n / sumOfReciprocals;
+    }
+
+    private static List<int> CalculateSatisfactionIndices(
+        IEnumerable<Team> teams,
+        IEnumerable<Wishlist> teamLeadsWishlists,
+        IEnumerable<Wishlist> juniorsWishlists)
+    {
+        var satisfactionIndices = new List<int>();
         foreach (var team in teams)
         {
-            var teamLeadWishlist = teamLeadsWishlists.First(w => w.EmployeeId == team.TeamLead.Id).DesiredEmployees
-                .ToList();
-            var juniorWishlist = juniorsWishlists.First(w => w.EmployeeId == team.Junior.Id).DesiredEmployees.ToList();
+            var teamLeadWishlist = teamLeadsWishlists.First(w => w.EmployeeId == team.TeamLead.Id).DesiredEmployees;
+            var juniorWishlist = juniorsWishlists.First(w => w.EmployeeId == team.Junior.Id).DesiredEmployees;
 
-            participants.Add((
-                team.TeamLead.Name,
-                teamLeadWishlist,
-                team.Junior.Id,
-                CalculateSatisfactionIndex(teamLeadWishlist, team.Junior.Id)));
+            int juniorSatisfaction = GetSatisfactionScore(juniorWishlist, team.TeamLead.Id);
+            int teamLeadSatisfaction = GetSatisfactionScore(teamLeadWishlist, team.Junior.Id);
 
-            participants.Add((
-                team.Junior.Name,
-                juniorWishlist,
-                team.TeamLead.Id,
-                CalculateSatisfactionIndex(juniorWishlist, team.TeamLead.Id)));
+            satisfactionIndices.Add(juniorSatisfaction);
+            satisfactionIndices.Add(teamLeadSatisfaction);
         }
 
-        return ComputeHarmonicity(participants);
+        return satisfactionIndices;
     }
-
-    private static int CalculateSatisfactionIndex(List<int> wishList, int assignedPartner)
+    private static int GetSatisfactionScore(int[] wishlist, int assignedPartner)
     {
-        int position = wishList.IndexOf(assignedPartner);
+        int position = Array.IndexOf(wishlist, assignedPartner);
         return 20 - position;
     }
-
-    private static double ComputeHarmonicity(
-        List<(string Name, List<int> WishList, int AssignedPartner, int SatisfactionIndex)> participants)
-    {
-        int n = participants.Count;
-        double denominator = 0;
-
-        foreach (var participant in participants)
-        {
-            denominator += 1.0 / participant.SatisfactionIndex;
-        }
-
-        return n / denominator;
-    }
-
     private static IEnumerable<Employee> LoadEmployeesFromCsv(string filePath)
     {
         return File.ReadLines(filePath)

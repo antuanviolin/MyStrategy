@@ -16,3 +16,4 @@ C:\Users\violi\Documents\Strategy\MyStrategy\obj\Debug\net8.0\refint\MyStrategy.
 C:\Users\violi\Documents\Strategy\MyStrategy\obj\Debug\net8.0\MyStrategy.pdb
 C:\Users\violi\Documents\Strategy\MyStrategy\obj\Debug\net8.0\MyStrategy.genruntimeconfig.cache
 C:\Users\violi\Documents\Strategy\MyStrategy\obj\Debug\net8.0\ref\MyStrategy.dll
+C:\Users\violi\Documents\Strategy\MyStrategy\obj\Debug\net8.0\MyStrategy.sourcelink.json

@@ -36,17 +36,29 @@ public class MyInterfaceStrategy : ITeamBuildingStrategy
         }
 
         var myengagements = GaleShapley.ConductStableMatching(myjuniors, myteamLeads);
-
         var satisfactionIndices = CalculateSatisfactionIndices(myengagements);
-
         var mean = CalculateHarmonicMean(satisfactionIndices);
 
-        Console.WriteLine($"Harmonic Mean for Run: {mean:F2}");
+        var myengagements2 = GaleShapley.ConductStableMatching(myteamLeads, myjuniors);
+        var satisfactionIndices2 = CalculateSatisfactionIndices(myengagements2);
+        var mean2 = CalculateHarmonicMean(satisfactionIndices2);
+
+         Console.WriteLine($"Harmonic Mean for Run 1: {mean:F2}, Harmonic Mean for Run 2: {mean2:F2}");
 
         var myteams = new List<Team>();
-        foreach (var engagement in myengagements)
+        if (mean > mean2)
         {
-            myteams.Add(new Team(new Employee(engagement.Key.Id, engagement.Key.Name), new Employee(engagement.Value.Id, engagement.Value.Name)));
+            foreach (var engagement in myengagements)
+            {
+                myteams.Add(new Team(new Employee(engagement.Key.Id, engagement.Key.Name), new Employee(engagement.Value.Id, engagement.Value.Name)));
+            }
+        }
+        else
+        {
+            foreach (var engagement in myengagements2)
+            {
+                myteams.Add(new Team(new Employee(engagement.Key.Id, engagement.Key.Name), new Employee(engagement.Value.Id, engagement.Value.Name)));
+            }
         }
         return myteams;
     }
@@ -84,4 +96,25 @@ public class MyInterfaceStrategy : ITeamBuildingStrategy
 
         return satisfactionIndices;
     }
+
+    public List<int> CalculateSatisfactionIndices(Dictionary<TeamLead, Junior> stablePairs)
+    {
+        var satisfactionIndices = new List<int>();
+        
+        foreach (var pair in stablePairs)
+        {
+            var teamLead = pair.Key;
+            var junior = pair.Value;
+
+            // Теперь джун оценивает тимлида, и тимлид оценивает джуна
+            int teamLeadSatisfaction = teamLead.GetSatisfactionScore(junior.Id);
+            int juniorSatisfaction = junior.GetSatisfactionScore(teamLead.Id);
+
+            satisfactionIndices.Add(teamLeadSatisfaction);
+            satisfactionIndices.Add(juniorSatisfaction);
+        }
+
+        return satisfactionIndices;
+    }
+
 }

@@ -60,4 +60,61 @@ public class GaleShapley
         }
         return engagements;
     }
+
+    public static Dictionary<TeamLead, Junior> ConductStableMatching(List<TeamLead> teamLeads, List<Junior> juniors)
+    {
+        // Свободные джуны
+        var freeJuniors = new Queue<Junior>(juniors);
+
+        // Карты для отслеживания предложений
+        var proposals = new Dictionary<Junior, HashSet<int>>();
+        foreach (var junior in juniors)
+        {
+            proposals[junior] = new HashSet<int>();
+        }
+
+        // Сопоставление тимлидов с джунами
+        var engagements = new Dictionary<TeamLead, Junior>();
+
+        while (freeJuniors.Count > 0)
+        {
+            var junior = freeJuniors.Dequeue();
+            var juniorPreferences = junior.Preferences;
+
+            foreach (var teamLeadId in juniorPreferences)
+            {
+                // Если джун еще не предлагал этому тимлиду
+                if (!proposals[junior].Contains(teamLeadId))
+                {
+                    proposals[junior].Add(teamLeadId);
+                    var teamLead = teamLeads.First(tl => tl.Id == teamLeadId);
+
+                    if (!engagements.ContainsKey(teamLead))
+                    {
+                        // Если тимлид еще не обручен
+                        engagements[teamLead] = junior;
+                    }
+                    else
+                    {
+                        var currentJunior = engagements[teamLead];
+                        // Проверяем, предпочитает ли тимлид нового джуна текущему
+                        if (teamLead.Preferences.IndexOf(junior.Id) < teamLead.Preferences.IndexOf(currentJunior.Id))
+                        {
+                            // Тимлид предпочитает нового джуна
+                            engagements[teamLead] = junior;
+                            freeJuniors.Enqueue(currentJunior); // Текущий джун становится свободным
+                        }
+                        else
+                        {
+                            // Тимлид остается с текущим джуном, а новый джун свободен
+                            freeJuniors.Enqueue(junior);
+                        }
+                    }
+                    break; // Джун делает предложение одному тимлиду за раз
+                }
+            }
+        }
+
+        return engagements;
+    }
 }
