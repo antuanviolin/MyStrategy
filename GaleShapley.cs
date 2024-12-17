@@ -4,117 +4,110 @@ namespace MyStrategy;
 
 public class GaleShapley
 {
+
     public static Dictionary<Junior, TeamLead> ConductStableMatching(List<Junior> juniors, List<TeamLead> teamLeads)
     {
-         // Свободные тимлиды
-        var freeTeamLeads = new Queue<TeamLead>(teamLeads);
+        int n = juniors.Count; // Количество джунов и тимлидов (предполагается одинаковое)
+        int[,] costMatrix = BuildCostMatrix(juniors, teamLeads);
 
-        // Карты для отслеживания предложений
-        var proposals = new Dictionary<TeamLead, HashSet<int>>();
-        foreach (var teamLead in teamLeads)
-        {
-            proposals[teamLead] = new HashSet<int>();
-        }
+        // Применяем венгерский алгоритм для поиска оптимального назначения
+        int[] assignment = HungarianAlgorithm(costMatrix);
 
-        // Сопоставление джунов с тимлидами
+        // Формируем результат
         var engagements = new Dictionary<Junior, TeamLead>();
-
-        while (freeTeamLeads.Count > 0)
+        for (int i = 0; i < n; i++)
         {
-            var teamLead = freeTeamLeads.Dequeue();
-            var teamLeadPreferences = teamLead.Preferences;
-
-            foreach (var juniorId in teamLeadPreferences)
-            {
-                // Если тимлид еще не предлагал этому джуну
-                if (!proposals[teamLead].Contains(juniorId))
-                {
-                    proposals[teamLead].Add(juniorId);
-                    var junior = juniors.First(j => j.Id == juniorId);
-
-                    if (!engagements.ContainsKey(junior))
-                    {
-                        // Если джун еще не обручен
-                        engagements[junior] = teamLead;
-                    }
-                    else
-                    {
-                        var currentTeamLead = engagements[junior];
-                        // Проверяем, предпочитает ли джун нового тимлида текущему
-                        if (junior.Preferences.IndexOf(teamLead.Id) <
-                            junior.Preferences.IndexOf(currentTeamLead.Id))
-                        {
-                            // Джун предпочитает нового тимлида
-                            engagements[junior] = teamLead;
-                            freeTeamLeads.Enqueue(currentTeamLead); // Текущий тимлид становится свободным
-                        }
-                        else
-                        {
-                            // Джун остается с текущим тимлидом, а новый тимлид свободен
-                            freeTeamLeads.Enqueue(teamLead);
-                        }
-                    }
-                    break; // Тимлид делает предложение одному джуну за раз
-                }
-            }
+            engagements[juniors[i]] = teamLeads[assignment[i]];
         }
+
         return engagements;
     }
 
-    public static Dictionary<TeamLead, Junior> ConductStableMatching(List<TeamLead> teamLeads, List<Junior> juniors)
+    private static int[,] BuildCostMatrix(List<Junior> juniors, List<TeamLead> teamLeads)
     {
-        // Свободные джуны
-        var freeJuniors = new Queue<Junior>(juniors);
+        int n = juniors.Count;
+        int[,] costMatrix = new int[n, n];
 
-        // Карты для отслеживания предложений
-        var proposals = new Dictionary<Junior, HashSet<int>>();
-        foreach (var junior in juniors)
+        for (int i = 0; i < n; i++)
         {
-            proposals[junior] = new HashSet<int>();
-        }
-
-        // Сопоставление тимлидов с джунами
-        var engagements = new Dictionary<TeamLead, Junior>();
-
-        while (freeJuniors.Count > 0)
-        {
-            var junior = freeJuniors.Dequeue();
-            var juniorPreferences = junior.Preferences;
-
-            foreach (var teamLeadId in juniorPreferences)
+            for (int j = 0; j < n; j++)
             {
-                // Если джун еще не предлагал этому тимлиду
-                if (!proposals[junior].Contains(teamLeadId))
-                {
-                    proposals[junior].Add(teamLeadId);
-                    var teamLead = teamLeads.First(tl => tl.Id == teamLeadId);
+                // Считаем "стоимость" как сумму удовлетворенностей джуна и тимлида
+                int juniorScore = juniors[i].GetSatisfactionScore(teamLeads[j].Id);
+                int teamLeadScore = teamLeads[j].GetSatisfactionScore(juniors[i].Id);
+                costMatrix[i, j] = -(juniorScore + teamLeadScore); // Для максимизации берем отрицательное значение
+            }
+        }
+        return costMatrix;
+    }
 
-                    if (!engagements.ContainsKey(teamLead))
+    private static int[] HungarianAlgorithm(int[,] costMatrix)
+    {
+        int n = costMatrix.GetLength(0);
+        int[] u = new int[n]; // Потенциалы по строкам
+        int[] v = new int[n]; // Потенциалы по столбцам
+        int[] p = new int[n]; // Покрытие по столбцам
+        int[] way = new int[n]; // "Путь" для минимального покрытия
+
+        for (int i = 0; i < n; i++)
+        {
+            int[] minv = new int[n];
+            bool[] used = new bool[n];
+            Array.Fill(minv, int.MaxValue);
+            int j0 = 0; // Текущий столбец
+            p[0] = i;
+
+            do
+            {
+                used[j0] = true;
+                int i0 = p[j0], delta = int.MaxValue, j1 = 0;
+
+                for (int j = 1; j < n; j++)
+                {
+                    if (!used[j])
                     {
-                        // Если тимлид еще не обручен
-                        engagements[teamLead] = junior;
+                        int cur = costMatrix[i0, j] - u[i0] - v[j];
+                        if (cur < minv[j])
+                        {
+                            minv[j] = cur;
+                            way[j] = j0;
+                        }
+                        if (minv[j] < delta)
+                        {
+                            delta = minv[j];
+                            j1 = j;
+                        }
+                    }
+                }
+
+                for (int j = 0; j < n; j++)
+                {
+                    if (used[j])
+                    {
+                        u[p[j]] += delta;
+                        v[j] -= delta;
                     }
                     else
                     {
-                        var currentJunior = engagements[teamLead];
-                        // Проверяем, предпочитает ли тимлид нового джуна текущему
-                        if (teamLead.Preferences.IndexOf(junior.Id) < teamLead.Preferences.IndexOf(currentJunior.Id))
-                        {
-                            // Тимлид предпочитает нового джуна
-                            engagements[teamLead] = junior;
-                            freeJuniors.Enqueue(currentJunior); // Текущий джун становится свободным
-                        }
-                        else
-                        {
-                            // Тимлид остается с текущим джуном, а новый джун свободен
-                            freeJuniors.Enqueue(junior);
-                        }
+                        minv[j] -= delta;
                     }
-                    break; // Джун делает предложение одному тимлиду за раз
                 }
-            }
+                j0 = j1;
+            } while (p[j0] != 0);
+
+            do
+            {
+                int j1 = way[j0];
+                p[j0] = p[j1];
+                j0 = j1;
+            } while (j0 != 0);
         }
 
-        return engagements;
+        int[] result = new int[n];
+        for (int j = 1; j < n; j++)
+        {
+            result[p[j]] = j;
+        }
+        return result;
     }
 }

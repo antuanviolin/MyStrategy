@@ -43,24 +43,7 @@ public class MyInterfaceStrategy : ITeamBuildingStrategy
         {
             myteams.Add(new Team(new Employee(engagement.Value.Id, engagement.Value.Name), new Employee(engagement.Key.Id, engagement.Key.Name)));
         }
-
-        var myengagements2 = GaleShapley.ConductStableMatching(myteamLeads, myjuniors);
-        var satisfactionIndices2 = CalculateSatisfactionIndices(myengagements2);
-        var mean2 = CalculateHarmonicMean(satisfactionIndices2);
-        var myteams2 = new List<Team>();
-        foreach (var engagement2 in myengagements2)
-        {
-            myteams2.Add(new Team(new Employee(engagement2.Key.Id, engagement2.Key.Name), new Employee(engagement2.Value.Id, engagement2.Value.Name)));
-        }
-
-        if(mean > mean2)
-        {
-            return myteams;
-        }
-        else
-        {
-            return myteams2;
-        }
+        return myteams;
     }
 
     public double CalculateHarmonicMean(List<int> satisfactionIndices)
